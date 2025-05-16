@@ -23,7 +23,7 @@ variable_store = {}  # Simulates memory for variables
 
 # Define individual token types using regex
 TOKEN_PATTERNS = {
-    "KEYWORD": r"\b(BEG|PRINT|EXIT!)\b",  # Reserved SNOL commands
+    "KEYWORD": r"\bBEG\b|\bPRINT\b|EXIT!", # Reserved SNOL commands
     "IDENT": r"[a-zA-Z][a-zA-Z0-9]*",     # Valid variable name (starts with letter followed by letters/digits)
     "NUMBER": r"-?\d+(\.\d+)?",           # Integer or floating-point literals
     "OPERATOR": r"[\+\-\*/%]",            # Arithmetic operators
@@ -115,7 +115,11 @@ class ExprCommand(Command):
     def execute(self):
         task2_eval_expression(self.expr)
 
-
+class ExitCommand(Command):
+    def execute(self):
+        print("Interpreter is now terminated...")
+        sys.exit(0)
+        
 # === Parser: Interprets list of tokens and creates a Command object ===
 
 def parse(tokens):
@@ -127,7 +131,9 @@ def parse(tokens):
         keyword = tokens[0].value
 
         if keyword == "EXIT!":
-            return "EXIT"
+            if len(tokens) != 1:  # EXIT! must be the only token
+                raise SNOLSyntaxError("EXIT! must be used alone")
+            return ExitCommand()  # Return a proper command object
 
         if keyword == "BEG":
             if len(tokens) != 2 or tokens[1].kind != "IDENT":
@@ -139,6 +145,14 @@ def parse(tokens):
                 raise SNOLSyntaxError()
             return PrintCommand(tokens[1].value)
 
+    # Reject commands that start with an operator
+    if tokens[0].kind == "OPERATOR":
+        raise SNOLUnknownCommandError()
+
+    # Reject any command that contains a keyword in an invalid position
+    for t in tokens[1:]:
+        if t.kind == "KEYWORD":
+            raise SNOLUnknownCommandError()
     # Handle assignment: var = expr
     if "=" in [t.value for t in tokens]:
         try:
@@ -178,7 +192,7 @@ def task2_beg_variable(var, value):
 def task2_print_variable(operand):
     if operand in variable_store:
         value = variable_store[operand]
-        print(f"SNOL> [{operand}] = [{value}]")
+        print(f"SNOL> [{operand}] = {value}")
     elif re.fullmatch(r"-?\d+(\.\d+)?", operand):
         print(f"SNOL> [literal] = [{operand}]")
     else:
@@ -209,17 +223,32 @@ def task2_eval_expression(expr):
     try:
         tokens = expr.split()
         evaluated_tokens = []
+        types = set()
         for token in tokens:
             if re.fullmatch(r"[a-zA-Z][a-zA-Z0-9]*", token):
                 if token not in variable_store:
-                    raise SNOLSyntaxError(f"Variable [{token}] not found.")
-                evaluated_tokens.append(str(variable_store[token]))
+                    print(f"SNOL> Error! [{token}] is not defined!")
+                    return
+                value = variable_store[token]
+                evaluated_tokens.append(str(value))
+                types.add(type(value))
+            elif re.fullmatch(r"-?\d+\.\d+", token):
+                evaluated_tokens.append(token)
+                types.add(float)
+            elif re.fullmatch(r"-?\d+", token):
+                evaluated_tokens.append(token)
+                types.add(int)
             else:
                 evaluated_tokens.append(token)
 
+        # Check for mixed int and float
+        if int in types and float in types:
+            print("SNOL> Error! Operands must be of the same type in an\narithmetic operation!")
+            return
+
         final_expr = " ".join(evaluated_tokens)
         result = eval(final_expr)
-        print(f"SNOL> [result] = [{result}]")
+        
     except Exception:
         raise SNOLSyntaxError("Invalid expression.")
 
@@ -250,9 +279,9 @@ class SNOLInterpreter:
                 tokens = tokenize(line)
                 cmd = parse(tokens)
 
-                # Exit command
-                if cmd == "EXIT":
-                    print("Interpreter is now terminated…")
+                # Exit command: terminate immediately
+                if isinstance(cmd, ExitCommand):
+                    cmd.execute()
                     break
 
                 # Execute the parsed command
@@ -262,7 +291,7 @@ class SNOLInterpreter:
             except SNOLInvalidVariableError as e:
                 self.print_error(f"Unknown word [{e}]")
             except SNOLSyntaxError:
-                self.print_error("Unknown command!! Does not match any valid command of the language.")
+                self.print_error("Unknown command! Does not match any valid command of the language.")
             except SNOLUnknownCommandError:
                 self.print_error("Unknown command! Does not match any valid command of the language.")
             except Exception as e:
