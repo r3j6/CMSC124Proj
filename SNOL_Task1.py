@@ -243,7 +243,7 @@ def task2_eval_expression(expr):
 
         # Check for mixed int and float
         if int in types and float in types:
-            print("SNOL> Error! Operands must be of the same type in an\narithmetic operation!")
+            print("SNOL> Error! Operands must be of the same type in an arithmetic operation!")
             return
 
         final_expr = " ".join(evaluated_tokens)
