@@ -15,6 +15,9 @@ class SNOLUnknownCommandError(SNOLException): pass
 # Raised when a variable name is invalid or uses a keyword
 class SNOLInvalidVariableError(SNOLException): pass
 
+# === Variable Storage ===
+
+variable_store = {}  # Simulates memory for variables
 
 # === Tokenization Patterns ===
 
@@ -155,6 +158,73 @@ def parse(tokens):
     expr_str = " ".join(t.value for t in tokens)
     return ExprCommand(expr_str)
 
+# === Task 2 Functionalities ===
+
+# Simulate variable storage via BEG
+def task2_beg_variable(var, value):
+    try:
+        if re.fullmatch(r"-?\d+", value):
+            parsed_value = int(value)
+        elif re.fullmatch(r"-?\d+\.\d+", value):
+            parsed_value = float(value)
+        else:
+            raise SNOLSyntaxError(f"Invalid input for variable [{var}]")
+    except Exception:
+        raise SNOLSyntaxError(f"Invalid input for variable [{var}]")
+
+    variable_store[var] = parsed_value
+
+# Simulate variable print
+def task2_print_variable(operand):
+    if operand in variable_store:
+        value = variable_store[operand]
+        print(f"SNOL> [{operand}] = [{value}]")
+    elif re.fullmatch(r"-?\d+(\.\d+)?", operand):
+        print(f"SNOL> [literal] = [{operand}]")
+    else:
+        raise SNOLSyntaxError(f"Variable [{operand}] not found.")
+
+# Simulate assignment operation
+def task2_assign_variable(var, expr):
+    try:
+        # Replace variables in the expression with their values
+        tokens = expr.split()
+        evaluated_tokens = []
+        for token in tokens:
+            if re.fullmatch(r"[a-zA-Z][a-zA-Z0-9]*", token):
+                if token not in variable_store:
+                    raise SNOLSyntaxError(f"Variable [{token}] not found.")
+                evaluated_tokens.append(str(variable_store[token]))
+            else:
+                evaluated_tokens.append(token)
+
+        final_expr = " ".join(evaluated_tokens)
+        result = eval(final_expr)
+        variable_store[var] = result
+    except Exception:
+        raise SNOLSyntaxError("Invalid expression in assignment.")
+
+# Simulate expression evaluation
+def task2_eval_expression(expr):
+    try:
+        tokens = expr.split()
+        evaluated_tokens = []
+        for token in tokens:
+            if re.fullmatch(r"[a-zA-Z][a-zA-Z0-9]*", token):
+                if token not in variable_store:
+                    raise SNOLSyntaxError(f"Variable [{token}] not found.")
+                evaluated_tokens.append(str(variable_store[token]))
+            else:
+                evaluated_tokens.append(token)
+
+        final_expr = " ".join(evaluated_tokens)
+        result = eval(final_expr)
+        print(f"SNOL> [result] = [{result}]")
+    except Exception:
+        raise SNOLSyntaxError("Invalid expression.")
+
+
+
 
 # === Interpreter Main Loop ===
 
@@ -192,7 +262,7 @@ class SNOLInterpreter:
             except SNOLInvalidVariableError as e:
                 self.print_error(f"Unknown word [{e}]")
             except SNOLSyntaxError:
-                self.print_error("Unknown command! Does not match any valid command of the language.")
+                self.print_error("Unknown command!! Does not match any valid command of the language.")
             except SNOLUnknownCommandError:
                 self.print_error("Unknown command! Does not match any valid command of the language.")
             except Exception as e:
@@ -207,7 +277,7 @@ class SNOLInterpreter:
 
 
 # === Task 2 Integration Placeholders ===
-
+'''
 # Simulate variable storage via BEG
 def task2_beg_variable(var, value):
     print(f"[DEBUG: Task 2 stores input: {var} = {value}]")
@@ -223,7 +293,7 @@ def task2_assign_variable(var, expr):
 # Simulate expression evaluation
 def task2_eval_expression(expr):
     print(f"[DEBUG: Task 2 evaluates: {expr}]")
-
+'''
 
 # === Entry Point ===
 if __name__ == "__main__":
